@@ -1,0 +1,2452 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GridCraft</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/expr-eval@2.0.2/dist/bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+      }
+    }
+  }
+};
+</script>
+
+<style>
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  input, textarea, .selectable { user-select: text; }
+
+  /* ---- primitives ---- */
+  .field {
+    width: 100%; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 6px 9px; font-size: 12px; color: #0f172a;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .field:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15,23,42,.06); }
+  .lbl { display: block; font-size: 10.5px; font-weight: 500; color: #6b7280; margin-bottom: 4px; }
+
+  .swatch {
+    width: 26px; height: 26px; padding: 2px; flex: none;
+    border: 1px solid #e5e7eb; border-radius: 7px; background: #fff;
+  }
+  .chk { width: 15px; height: 15px; accent-color: #0f172a; flex: none; }
+
+  .icon-btn {
+    display: inline-grid; place-items: center;
+    width: 30px; height: 30px; flex: none;
+    border-radius: 7px; color: #6b7280; font-size: 12.5px;
+    transition: background .15s, color .15s;
+  }
+  .icon-btn:hover { background: #f3f4f6; color: #0f172a; }
+  .icon-btn:disabled { opacity: .3; }
+  .icon-btn:disabled:hover { background: transparent; color: #6b7280; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 6px 11px; border-radius: 7px;
+    background: #0f172a; color: #fff;
+    font-size: 11.5px; font-weight: 600;
+    transition: background .15s, transform .1s;
+  }
+  .btn-primary:hover { background: #1e293b; }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 6px 11px; border-radius: 7px;
+    background: #f3f4f6; color: #374151;
+    font-size: 11.5px; font-weight: 600;
+    transition: background .15s;
+  }
+  .btn-ghost:hover { background: #e5e7eb; }
+
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* ---- scrollbar ---- */
+  .scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll::-webkit-scrollbar-track { background: transparent; }
+  .scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; border: 2px solid #fff; }
+  .scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+  /* ---- dialog ---- */
+  dialog { border: none; padding: 0; background: transparent; }
+  dialog::backdrop { background: rgba(15,23,42,.5); backdrop-filter: blur(4px); }
+
+  /* ---- background options ---- */
+  .bg-opt {
+    padding: 9px 6px 7px; border-radius: 9px;
+    border: 1.5px solid #e5e7eb; background: #fff;
+    font-size: 10.5px; font-weight: 600; color: #6b7280;
+    transition: all .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .bg-opt:hover { border-color: #9ca3af; }
+  .bg-opt.is-active { border-color: #0f172a; color: #0f172a; box-shadow: 0 0 0 3px rgba(15,23,42,.05); }
+  .bg-opt .chip { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #e5e7eb; }
+  .bg-opt[data-bg="white"] .chip { background: #fff; }
+  .bg-opt[data-bg="transparent"] .chip {
+    background-image:
+      linear-gradient(45deg, #d1d5db 25%, transparent 25%),
+      linear-gradient(-45deg, #d1d5db 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #d1d5db 75%),
+      linear-gradient(-45deg, transparent 75%, #d1d5db 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    background-color: #fff;
+  }
+  .bg-opt[data-bg="dark"] .chip { background: #0b1220; border-color: #1e293b; }
+
+  .preview-checker {
+    background-image:
+      linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+      linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    background-color: #f9fafb;
+  }
+
+  /* ---- chat ---- */
+  .chat { display: flex; flex-direction: column; gap: 12px; }
+  .msg { display: flex; flex-direction: column; }
+  .msg.user { align-items: flex-end; }
+  .msg.assistant { align-items: flex-start; }
+
+  .msg-body {
+    max-width: 92%;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 9px 13px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .msg.user .msg-body {
+    background: #0f172a; color: #f9fafb;
+    border-bottom-right-radius: 4px;
+    white-space: pre-wrap;
+  }
+  .msg.assistant .msg-body {
+    background: #f9fafb; color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 4px;
+    max-width: 100%;
+  }
+  .msg.assistant .msg-body p:first-child { margin-top: 0; }
+  .msg.assistant .msg-body p:last-child { margin-bottom: 0; }
+  .msg.assistant .msg-body p { margin: 6px 0; }
+  .msg.assistant .msg-body ul, .msg.assistant .msg-body ol { padding-left: 20px; margin: 6px 0; }
+  .msg.assistant .msg-body li { margin: 2px 0; }
+  .msg.assistant .msg-body h1,
+  .msg.assistant .msg-body h2,
+  .msg.assistant .msg-body h3 { font-weight: 600; margin: 12px 0 6px; line-height: 1.3; }
+  .msg.assistant .msg-body h1 { font-size: 15px; }
+  .msg.assistant .msg-body h2 { font-size: 14px; }
+  .msg.assistant .msg-body h3 { font-size: 13px; }
+  .msg.assistant .msg-body code {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    background: #e5e7eb; padding: 1px 5px; border-radius: 4px;
+  }
+  .msg.assistant .msg-body pre {
+    background: #0f172a; color: #e5e7eb;
+    padding: 10px 12px; border-radius: 8px;
+    overflow-x: auto; margin: 8px 0;
+    font-size: 11.5px;
+  }
+  .msg.assistant .msg-body pre code {
+    background: transparent; padding: 0; color: inherit; font-size: 11.5px;
+  }
+  .msg.assistant .msg-body a { color: #0369a1; text-decoration: underline; }
+
+  .msg-actions {
+    display: flex; gap: 2px; margin-top: 4px; padding: 0 2px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .msg:hover .msg-actions { opacity: 1; }
+  .msg.user .msg-actions { justify-content: flex-end; }
+  .msg-action {
+    width: 24px; height: 24px; border-radius: 5px;
+    color: #9ca3af; font-size: 10px;
+    display: grid; place-items: center;
+    transition: background .15s, color .15s;
+  }
+  .msg-action:hover { background: #f3f4f6; color: #374151; }
+
+  .msg-editor {
+    width: 100%; background: #fff;
+    border: 1px solid #0f172a; border-radius: 10px;
+    padding: 8px 10px; font-size: 13px; font-family: inherit;
+    outline: none; resize: vertical; min-height: 60px;
+    box-shadow: 0 0 0 3px rgba(15,23,42,.06);
+  }
+  .msg-editor-actions {
+    display: flex; gap: 6px; margin-top: 6px; justify-content: flex-end;
+  }
+
+  .thinking { color: #6b7280; font-style: italic; font-size: 12px; }
+  .dot-pulse::after {
+    content: '...';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+
+  .err-box {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: #fef2f2; border: 1px solid #fecaca;
+    color: #991b1b; font-size: 12px;
+    padding: 8px 10px; border-radius: 8px;
+  }
+
+  /* ---- empty state ---- */
+  .empty-fade {
+    transition: opacity .25s ease;
+  }
+
+  canvas { display: block; touch-action: none; }
+</style>
+</head>
+
+<body class="h-full flex flex-col overflow-hidden bg-white text-slate-800">
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="h-12 shrink-0 bg-white border-b border-slate-200 flex items-center gap-1 px-2 sm:px-3 z-40">
+  <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
+  <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Y)" disabled><i class="fa-solid fa-rotate-right"></i></button>
+  <button id="fitBtn" class="icon-btn" title="Fit view (F)"><i class="fa-solid fa-expand"></i></button>
+
+  <div class="flex-1"></div>
+
+  <button id="aiBtn" class="icon-btn" title="AI assistant (A)"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+  <button id="panelBtn" class="icon-btn lg:hidden" title="Panel"><i class="fa-solid fa-sliders"></i></button>
+  <button id="exportBtn" class="ml-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[12px] font-semibold transition active:scale-95">
+    <i class="fa-solid fa-download text-[11px]"></i><span class="hidden sm:inline">Export</span>
+  </button>
+</header>
+
+<!-- ══════════════ WORKSPACE ══════════════ -->
+<div class="flex-1 flex overflow-hidden relative">
+
+  <main class="flex-1 relative overflow-hidden bg-slate-50">
+    <div id="canvasWrap" class="absolute inset-0">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- empty state hint -->
+    <div id="emptyState" class="absolute inset-0 grid place-items-center pointer-events-none empty-fade">
+      <div class="text-center">
+        <div class="inline-flex w-11 h-11 rounded-full bg-white border border-slate-200 text-slate-400 items-center justify-center mb-2.5 shadow-sm">
+          <i class="fa-solid fa-arrow-pointer text-[15px]"></i>
+        </div>
+        <p class="text-[13px] text-slate-600 font-medium">Click anywhere to add a point</p>
+        <p class="text-[11px] text-slate-400 mt-1">Drag to pan · Scroll to zoom · Press A for AI</p>
+      </div>
+    </div>
+
+    <!-- zoom controls -->
+    <div class="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-0.5 bg-white/95 backdrop-blur border border-slate-200 rounded-lg p-0.5 shadow-sm">
+      <button id="zoomOut" class="icon-btn" title="Zoom out (−)"><i class="fa-solid fa-minus text-[11px]"></i></button>
+      <button id="zoomReset" class="px-1 text-[11px] font-mono text-slate-600 hover:bg-slate-100 rounded py-1 min-w-[44px] tabular-nums">100%</button>
+      <button id="zoomIn" class="icon-btn" title="Zoom in (+)"><i class="fa-solid fa-plus text-[11px]"></i></button>
+    </div>
+
+    <div id="toast" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none
+                          bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-lg
+                          text-[11.5px] font-medium flex items-center gap-2 border border-slate-700
+                          opacity-0 translate-y-2 transition-all duration-200">
+      <i id="toastIcon" class="fa-solid fa-circle-check text-sky-400 text-[11px]"></i>
+      <span id="toastMsg">Ready</span>
+    </div>
+  </main>
+
+  <div id="backdrop" class="hidden lg:hidden fixed inset-0 bg-slate-900/40 z-20"></div>
+
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside id="sidebar"
+         class="absolute lg:static inset-y-0 right-0 z-30 w-72 xl:w-80 shrink-0
+                bg-white border-l border-slate-200 flex flex-col overflow-hidden
+                translate-x-full lg:translate-x-0 transition-transform duration-200 shadow-xl lg:shadow-none">
+
+    <div class="flex-1 overflow-y-auto overscroll-contain scroll">
+
+      <!-- POINTS -->
+      <details open class="group border-b border-slate-200">
+        <summary class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-50 transition">
+          <span class="flex items-center gap-2.5 text-[12.5px] font-semibold text-slate-900">
+            <i class="fa-solid fa-location-dot text-slate-400 w-4 text-center text-[11px]"></i> Points
+            <span id="pointsCount" class="text-[10px] font-medium text-slate-400"></span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+
+        <div class="px-3 pb-3 space-y-2.5">
+          <div id="pointsList" class="space-y-1 max-h-64 overflow-y-auto scroll -mr-1 pr-1"></div>
+
+          <div class="flex items-end gap-1.5">
+            <label class="flex-1">
+              <span class="lbl">x</span>
+              <input id="newX" type="number" step="any" value="0" class="field font-mono">
+            </label>
+            <label class="flex-1">
+              <span class="lbl">y</span>
+              <input id="newY" type="number" step="any" value="0" class="field font-mono">
+            </label>
+            <button id="addPointBtn" class="btn-primary h-[30px]">Add</button>
+          </div>
+
+          <div class="flex items-center justify-between pt-0.5">
+            <label class="flex items-center gap-2 text-[11.5px] text-slate-600">
+              <input id="snapChk" type="checkbox" class="chk" checked> Snap to grid
+            </label>
+            <button id="clearPointsBtn" class="text-[11px] font-medium text-slate-400 hover:text-red-600 transition">Clear points</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- LINES -->
+      <details open class="group border-b border-slate-200">
+        <summary class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-50 transition">
+          <span class="flex items-center gap-2.5 text-[12.5px] font-semibold text-slate-900">
+            <i class="fa-solid fa-vector-square text-slate-400 w-4 text-center text-[11px]"></i> Lines
+          </span>
+          <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+
+        <div class="px-3 pb-3 space-y-2.5">
+          <label class="flex items-center gap-2 text-[11.5px] text-slate-700">
+            <input id="connectChk" type="checkbox" class="chk" checked> Connect the points
+          </label>
+
+          <div id="lineOptions" class="space-y-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <label>
+                <span class="lbl">Style</span>
+                <select id="connectStyle" class="field">
+                  <option value="sequence">In order</option>
+                  <option value="polygon">Closed</option>
+                  <option value="arrows">Arrows</option>
+                </select>
+              </label>
+              <label>
+                <span class="lbl">Thickness</span>
+                <select id="lineWidth" class="field">
+                  <option value="1">Thin</option>
+                  <option value="2" selected>Normal</option>
+                  <option value="3">Thick</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-[11.5px] text-slate-700">Colour</span>
+              <input id="lineColor" type="color" value="#0f172a" class="swatch">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- CURVES -->
+      <details open class="group border-b border-slate-200">
+        <summary class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-50 transition">
+          <span class="flex items-center gap-2.5 text-[12.5px] font-semibold text-slate-900">
+            <i class="fa-solid fa-wave-square text-slate-400 w-4 text-center text-[11px]"></i> Curves
+            <span id="curvesCount" class="text-[10px] font-medium text-slate-400"></span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+
+        <div class="px-3 pb-3 space-y-2.5">
+          <div class="flex gap-1.5">
+            <div class="relative flex-1">
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400 pointer-events-none">y =</span>
+              <input id="curveExpr" type="text" value="x^2" spellcheck="false" class="field pl-8 font-mono">
+            </div>
+            <input id="curveColor" type="color" value="#0284c7" class="swatch self-center">
+            <button id="addCurveBtn" class="btn-primary h-[30px]">Plot</button>
+          </div>
+
+          <p class="text-[10.5px] text-slate-400 leading-relaxed">
+            <code class="font-mono text-slate-500">x^2</code> ·
+            <code class="font-mono text-slate-500">2x - 1</code> ·
+            <code class="font-mono text-slate-500">sin(x)</code> ·
+            <code class="font-mono text-slate-500">sqrt(x)</code>
+          </p>
+
+          <div id="curvesList" class="space-y-1"></div>
+        </div>
+      </details>
+
+      <!-- APPEARANCE -->
+      <details class="group border-b border-slate-200">
+        <summary class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-50 transition">
+          <span class="flex items-center gap-2.5 text-[12.5px] font-semibold text-slate-900">
+            <i class="fa-solid fa-border-all text-slate-400 w-4 text-center text-[11px]"></i> Appearance
+          </span>
+          <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform group-open:rotate-180"></i>
+        </summary>
+
+        <div class="px-3 pb-3 space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <label>
+              <span class="lbl">X axis</span>
+              <input id="xTitle" type="text" value="x" maxlength="8" class="field">
+            </label>
+            <label>
+              <span class="lbl">Y axis</span>
+              <input id="yTitle" type="text" value="y" maxlength="8" class="field">
+            </label>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-[11.5px] text-slate-700">
+              <input id="gridChk" type="checkbox" class="chk" checked> Show grid
+            </label>
+            <label class="flex items-center gap-2 text-[11.5px] text-slate-700">
+              <input id="numbersChk" type="checkbox" class="chk" checked> Numbers on axes
+            </label>
+            <label class="flex items-center gap-2 text-[11.5px] text-slate-700">
+              <input id="coordsChk" type="checkbox" class="chk" checked> Point labels
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-between gap-2 text-[11.5px] text-slate-700">
+              Grid <input id="gridColor" type="color" value="#cbd5e1" class="swatch">
+            </label>
+            <label class="flex items-center justify-between gap-2 text-[11.5px] text-slate-700">
+              Axes <input id="axisColor" type="color" value="#0f172a" class="swatch">
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <!-- SAVE / LOAD -->
+      <div class="p-3 space-y-1.5">
+        <button id="saveJSONBtn" class="w-full py-1.5 rounded-md border border-slate-200 text-[11.5px] font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 transition">
+          <i class="fa-solid fa-file-arrow-down text-[10px] mr-1.5"></i>Save graph as JSON
+        </button>
+        <button id="loadJSONBtn" class="w-full py-1.5 rounded-md border border-slate-200 text-[11.5px] font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 transition">
+          <i class="fa-solid fa-file-arrow-up text-[10px] mr-1.5"></i>Load graph from JSON
+        </button>
+        <button id="resetAllBtn" class="w-full py-1.5 rounded-md border border-slate-200 text-[11.5px] font-medium text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition">
+          <i class="fa-solid fa-rotate text-[10px] mr-1.5"></i>Reset everything
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ══════════════ EXPORT DIALOG ══════════════ -->
+<dialog id="exportDialog">
+  <form method="dialog" class="w-[min(92vw,22rem)] bg-white rounded-xl p-4 space-y-3.5 shadow-2xl">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-[14px] font-semibold text-slate-900">Export image</h2>
+        <p class="text-[11.5px] text-slate-500 mt-0.5">PNG at 2× for crisp documents.</p>
+      </div>
+      <button value="cancel" class="icon-btn -mt-1 -mr-1" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="rounded-lg overflow-hidden border border-slate-200 preview-checker">
+      <canvas id="previewCanvas" class="block w-full"></canvas>
+    </div>
+
+    <div>
+      <span class="lbl">Background</span>
+      <div class="grid grid-cols-3 gap-1.5">
+        <button type="button" data-bg="white" class="bg-opt is-active"><span class="chip"></span>White</button>
+        <button type="button" data-bg="transparent" class="bg-opt"><span class="chip"></span>Clear</button>
+        <button type="button" data-bg="dark" class="bg-opt"><span class="chip"></span>Dark</button>
+      </div>
+    </div>
+
+    <div class="flex gap-1.5 pt-1">
+      <button value="cancel" class="btn-ghost flex-1">Cancel</button>
+      <button id="copyImgBtn" type="button" class="btn-ghost px-3" title="Copy to clipboard"><i class="fa-regular fa-copy"></i></button>
+      <button id="downloadBtn" type="button" class="btn-primary flex-1">Download</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ══════════════ AI DIALOG ══════════════ -->
+<dialog id="aiDialog">
+  <div class="w-[min(94vw,30rem)] h-[min(85vh,42rem)] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden">
+
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 shrink-0">
+      <h2 class="text-[13px] font-semibold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-slate-400 text-[11px]"></i> AI Assistant
+      </h2>
+      <div class="flex items-center gap-0.5">
+        <button id="aiSettingsToggle" class="icon-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+        <button id="aiClearBtn" class="icon-btn" title="New chat"><i class="fa-solid fa-plus"></i></button>
+        <button id="aiCloseBtn" class="icon-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div id="aiSettings" class="hidden px-4 py-3 border-b border-slate-200 bg-slate-50 space-y-2 shrink-0">
+      <label class="block">
+        <span class="lbl">Endpoint (OpenAI-compatible)</span>
+        <input id="aiEndpoint" type="text" value="http://localhost:1234/v1" class="field font-mono text-[11px]">
+      </label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="block">
+          <span class="lbl">Model</span>
+          <input id="aiModel" type="text" value="local-model" class="field font-mono text-[11px]">
+        </label>
+        <label class="block">
+          <span class="lbl">API key (optional)</span>
+          <input id="aiKey" type="password" placeholder="sk-…" class="field font-mono text-[11px]">
+        </label>
+      </div>
+      <p class="text-[10.5px] text-slate-400 leading-relaxed">
+        Works with LM Studio, Ollama, vLLM, OpenAI, and anything compatible.
+      </p>
+    </div>
+
+    <div id="aiChat" class="flex-1 overflow-y-auto p-4 scroll chat">
+      <div id="aiEmpty" class="text-center py-8">
+        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-400 mb-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-[14px]"></i>
+        </div>
+        <p class="text-[12px] text-slate-500 leading-relaxed">
+          Ask a maths question or describe what to plot.<br>
+          The AI reasons first, then updates the graph.
+        </p>
+        <div id="aiSuggestions" class="flex flex-wrap gap-1.5 justify-center mt-3 max-w-xs mx-auto"></div>
+      </div>
+    </div>
+
+    <div class="p-2.5 border-t border-slate-200 flex gap-1.5 shrink-0">
+      <input id="aiInput" type="text" placeholder="Ask anything…"
+             class="field flex-1 text-[12.5px] py-2">
+      <button id="aiSend" class="btn-primary px-3" title="Send (Enter)"><i class="fa-solid fa-arrow-up text-[11px]"></i></button>
+      <button id="aiStop" class="btn-ghost px-3 hidden" title="Stop"><i class="fa-solid fa-stop text-[11px]"></i></button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ═══════════════════════════════════════════════════════
+     AI MODULE
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/x-module" id="mod-ai">
+/* ============================================================
+ * ai.js — AI assistant
+ * - Multi-step tool loop (AI can take actions, see results, act again)
+ * - Streaming markdown + KaTeX + syntax highlight
+ * - Edit user messages, regenerate assistant replies, stop mid-stream
+ * ============================================================ */
+
+const SUGGESTIONS = [
+  'Plot a triangle with vertices (0,0), (4,0), (2,3)',
+  'Draw y = x² and y = 2x together',
+  'Plot the unit circle',
+  'Make a scatter plot of (-2,3), (0,1), (3,4), (4,-1)'
+];
+
+const MAX_STEPS = 4;
+
+const SYSTEM_PROMPT = `You are GridCraft AI — an assistant inside a Cartesian graphing tool.
+You help users draw and edit graphs on an infinite Cartesian plane.
+
+## Your workflow
+1. THINK first — inside <thinking>...</thinking> tags, plan what to do.
+2. ACT second — if the graph needs changes, output ONE \`\`\`json code block with an "actions" array.
+3. CONFIRM last — after the changes are applied, write a short, friendly summary.
+
+You can work in multiple steps: after you take an action, you'll see the new graph state and can decide whether to take another action or stop.
+
+## Available actions
+
+Add/remove points and curves:
+  {"type":"addPoint", "x":2, "y":3, "label":"A"}       — add one point
+  {"type":"removePoint", "label":"A"}                    — remove by label
+  {"type":"addCurve", "expr":"x^2"}                      — plot y = f(x)
+  {"type":"removeCurve", "expr":"x^2"}                   — remove by expression
+
+Canvas operations:
+  {"type":"clear", "scope":"all"|"points"|"curves"}
+  {"type":"fit"}                                          — zoom to fit all points
+  {"type":"reset"}                                        — reset to origin at 100%
+  {"type":"view", "cx":0, "cy":0, "ppu":60}               — set exact camera
+
+Change settings:
+  {"type":"set", "key":<name>, "value":<value>}
+
+  key names and valid values:
+    connect        — true | false          (draw lines between points)
+    connectStyle   — "sequence" | "polygon" | "arrows"
+    lineColor      — "#rrggbb"
+    lineWidth      — 1 | 2 | 3
+    gridColor      — "#rrggbb"
+    axisColor      — "#rrggbb"
+    xTitle         — any short string
+    yTitle         — any short string
+    showGrid       — true | false
+    showNumbers    — true | false
+    showPointCoords — true | false
+    snap           — true | false
+
+## Rules
+- Use exact decimals. Never write "≈".
+- Default point labels: A, B, C, ...
+- Curve expressions use plain math syntax: x^2, sin(x), sqrt(x), 2*x - 1.
+- If the user only asks a question (no changes needed), skip the JSON block.
+- Keep summaries to 1–2 sentences.
+
+## Examples
+
+User: "Draw a triangle with vertices (0,0), (4,0), (2,3)"
+<thinking>
+Three points form a triangle. I'll clear the canvas, add A/B/C, then close the shape with polygon style.
+</thinking>
+\`\`\`json
+{"actions":[
+  {"type":"clear","scope":"all"},
+  {"type":"addPoint","x":0,"y":0,"label":"A"},
+  {"type":"addPoint","x":4,"y":0,"label":"B"},
+  {"type":"addPoint","x":2,"y":3,"label":"C"},
+  {"type":"set","key":"connectStyle","value":"polygon"}
+]}
+\`\`\`
+Done — your triangle is on the canvas.
+
+User: "What does the graph currently show?"
+<thinking>Just describe the state; no changes needed.</thinking>
+The graph shows three points A(0, 0), B(4, 0), C(2, 3) connected as a closed triangle.`;
+
+/* ---- Markdown + math + syntax ---- */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+  ));
+}
+
+function renderMarkdown(text) {
+  let html;
+  try {
+    html = marked.parse(text || '', { breaks: true, gfm: true });
+  } catch (e) {
+    html = '<pre>' + escapeHtml(text || '') + '</pre>';
+  }
+  try {
+    return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+  } catch (e) {
+    return escapeHtml(text || '');
+  }
+}
+
+function enhance(el) {
+  if (window.hljs) {
+    el.querySelectorAll('pre code').forEach(b => {
+      if (b.dataset.hl) return;
+      try { window.hljs.highlightElement(b); b.dataset.hl = '1'; } catch (e) {}
+    });
+  }
+  if (window.renderMathInElement) {
+    try {
+      window.renderMathInElement(el, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true }
+        ],
+        throwOnError: false
+      });
+    } catch (e) {}
+  }
+}
+
+/* ---- Extract action JSON from a response ---- */
+function extractActions(text) {
+  let m = text.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (!m) {
+    m = text.match(/```[a-z]*\s*(\{[\s\S]*?"actions"[\s\S]*?\})\s*```/i);
+    if (!m) {
+      const start = text.indexOf('{"actions"');
+      if (start !== -1) {
+        const slice = text.slice(start);
+        const m2 = slice.match(/^\{"actions"\s*:\s*\[[\s\S]*?\]\s*\}/);
+        if (m2) { try { return JSON.parse(m2[0]); } catch (e) { return null; } }
+      }
+      return null;
+    }
+  }
+  try { return JSON.parse(m[1]); } catch (e) { return null; }
+}
+
+/* ---- Remove thinking + JSON for display ---- */
+function cleanDisplay(text) {
+  return text
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+    .replace(/```json[\s\S]*?```/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/* ============================================================
+ * Chat controller
+ * ============================================================ */
+export function createAssistant(opts) {
+  const {
+    chatEl, inputEl, sendBtn, stopBtn,
+    getEndpoint, getModel, getApiKey,
+    getGraphContext,
+    executeActions,
+    toast
+  } = opts;
+
+  const history = [];   // [{ role, content }]
+  let abortCtl = null;
+  let streaming = false;
+
+  /* ---- suggestions ---- */
+  const sugEl = document.getElementById('aiSuggestions');
+  if (sugEl) buildSuggestions(sugEl);
+
+  function buildSuggestions(parent) {
+    SUGGESTIONS.forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'px-2.5 py-1 text-[11px] rounded-full border border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900 transition';
+      b.textContent = s;
+      b.addEventListener('click', () => { inputEl.value = s; send(); });
+      parent.appendChild(b);
+    });
+  }
+
+  /* ---- scroll handling ---- */
+  let userScrolled = false;
+  chatEl.addEventListener('scroll', () => {
+    userScrolled = chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight > 40;
+  });
+  function scrollToBottom(force) {
+    if (force || !userScrolled) chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  /* ---- DOM helpers ---- */
+  function el(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  }
+
+  function hideEmpty() {
+    const e = document.getElementById('aiEmpty');
+    if (e) e.remove();
+  }
+
+  function createMsg(role, content) {
+    const wrap = el('div', 'msg ' + role);
+    const body = el('div', 'msg-body');
+    body.innerHTML = renderMarkdown(content);
+    enhance(body);
+    wrap.appendChild(body);
+
+    const actions = el('div', 'msg-actions');
+    wrap.appendChild(actions);
+
+    if (role === 'assistant') {
+      const regen = el('button', 'msg-action');
+      regen.title = 'Regenerate';
+      regen.innerHTML = '<i class="fa-solid fa-rotate"></i>';
+      regen.addEventListener('click', () => regenerate(wrap));
+      actions.append(regen);
+    } else if (role === 'user') {
+      const edit = el('button', 'msg-action');
+      edit.title = 'Edit and resend';
+      edit.innerHTML = '<i class="fa-solid fa-pen"></i>';
+      edit.addEventListener('click', () => startEdit(wrap));
+      actions.append(edit);
+    }
+
+    return wrap;
+  }
+
+  /* ---- Send ---- */
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text || streaming) return;
+    inputEl.value = '';
+    hideEmpty();
+    history.push({ role: 'user', content: text });
+    chatEl.appendChild(createMsg('user', text));
+    scrollToBottom(true);
+    await generate();
+  }
+
+  /* ---- Multi-step generate ---- */
+  async function generate() {
+    setStreaming(true);
+    abortCtl = new AbortController();
+
+    /* Build the message list for this run */
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT + '\n\n## Current graph state\n' + getGraphContext() },
+      ...history.map(m => ({ role: m.role, content: m.content }))
+    ];
+
+    try {
+      for (let step = 0; step < MAX_STEPS; step++) {
+        const result = await runOneStream(messages);
+
+        if (result.aborted) break;
+
+        const payload = extractActions(result.text);
+        const hasActions = payload && Array.isArray(payload.actions) && payload.actions.length > 0;
+
+        /* Record assistant reply in history */
+        if (result.text) history.push({ role: 'assistant', content: result.text });
+
+        if (hasActions) {
+          executeActions(payload);
+
+          /* Continue loop — let the AI see the result and decide */
+          messages.push({ role: 'assistant', content: result.text });
+          messages.push({
+            role: 'user',
+            content:
+              '[system] The actions above have been applied. Current graph state:\n' +
+              getGraphContext() +
+              '\n\nIf the user\'s request is fully satisfied, write a short summary now (no JSON). ' +
+              'If you need to make more changes, output another JSON block.'
+          });
+          continue;
+        }
+
+        /* No actions — we're done */
+        break;
+      }
+    } catch (err) {
+      showError(err);
+    } finally {
+      setStreaming(false);
+      abortCtl = null;
+    }
+  }
+
+  /* ---- Single streaming round ---- */
+  async function runOneStream(messages) {
+    const wrap = createMsg('assistant', '');
+    const body = wrap.querySelector('.msg-body');
+    body.innerHTML = '<span class="thinking dot-pulse">Thinking</span>';
+    chatEl.appendChild(wrap);
+    scrollToBottom(true);
+
+    let text = '';
+    let raf = 0;
+
+    const paint = () => {
+      const display = cleanDisplay(text);
+      if (display) {
+        body.innerHTML = renderMarkdown(display);
+      } else {
+        body.innerHTML = '<span class="thinking dot-pulse">Thinking</span>';
+      }
+      enhance(body);
+      scrollToBottom(false);
+    };
+
+    try {
+      await streamChat(messages, chunk => {
+        text += chunk;
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); });
+      }, abortCtl.signal);
+    } catch (err) {
+      if (raf) cancelAnimationFrame(raf);
+      if (err.name === 'AbortError') {
+        /* Finalize whatever we have */
+        finalizeBubble(body, text);
+        return { text, aborted: true };
+      }
+      throw err;
+    }
+
+    if (raf) cancelAnimationFrame(raf);
+    finalizeBubble(body, text);
+    return { text, aborted: false };
+  }
+
+  function finalizeBubble(body, text) {
+    const display = cleanDisplay(text);
+    const payload = extractActions(text);
+
+    if (display) {
+      body.innerHTML = renderMarkdown(display);
+    } else if (payload && payload.actions && payload.actions.length) {
+      body.innerHTML = '<span class="text-slate-400 italic text-[12px]">Applying changes…</span>';
+    } else if (text.trim()) {
+      body.innerHTML = '<span class="text-slate-400 italic text-[12px]">No visible text.</span>';
+    } else {
+      body.innerHTML = '<span class="text-slate-400 italic text-[12px]">No response.</span>';
+    }
+    enhance(body);
+    scrollToBottom(false);
+  }
+
+  /* ---- Streaming client ---- */
+  async function streamChat(messages, onChunk, signal) {
+    const ep = (getEndpoint() || '').trim().replace(/\/+$/, '');
+    if (!ep) throw new Error('No endpoint configured');
+    const url = ep + '/chat/completions';
+
+    const headers = { 'Content-Type': 'application/json' };
+    const key = getApiKey && getApiKey();
+    if (key) headers['Authorization'] = 'Bearer ' + key;
+
+    const body = {
+      model: getModel() || 'local-model',
+      messages,
+      stream: true,
+      temperature: 0.2
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST', headers,
+      body: JSON.stringify(body),
+      signal
+    });
+
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => '');
+      throw new Error('HTTP ' + resp.status + (t ? ' — ' + t.slice(0, 120) : ''));
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') return;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string' && delta.length) onChunk(delta);
+        } catch (e) { /* skip malformed chunks */ }
+      }
+    }
+  }
+
+  /* ---- Error display ---- */
+  function showError(err) {
+    const wrap = createMsg('assistant', '');
+    const body = wrap.querySelector('.msg-body');
+    body.innerHTML = '';
+    const box = el('div', 'err-box');
+    box.innerHTML = '<i class="fa-solid fa-triangle-exclamation mt-0.5"></i>';
+
+    const inner = el('div', 'flex-1 selectable');
+    const msg = el('div');
+    msg.textContent = 'Could not reach the AI server. ' + (err.message || '');
+    inner.appendChild(msg);
+
+    const retry = el('button', 'text-[11px] font-semibold underline mt-1');
+    retry.textContent = 'Try again';
+    retry.addEventListener('click', () => {
+      wrap.remove();
+      generate();
+    });
+    inner.appendChild(retry);
+    box.appendChild(inner);
+    body.appendChild(box);
+
+    chatEl.appendChild(wrap);
+    scrollToBottom(true);
+  }
+
+  /* ---- Edit user message ---- */
+  function startEdit(wrap) {
+    if (streaming) { toast('Wait for the AI to finish', 'fa-solid fa-hourglass'); return; }
+
+    const domMsgs = [...chatEl.querySelectorAll('.msg')];
+    const idx = domMsgs.indexOf(wrap);
+    if (idx === -1) return;
+
+    /* Get the current text from the body */
+    const body = wrap.querySelector('.msg-body');
+    const actions = wrap.querySelector('.msg-actions');
+    if (!body) return;
+    const oldText = body.textContent;
+
+    body.style.display = 'none';
+    if (actions) actions.style.display = 'none';
+
+    const editor = el('textarea', 'msg-editor');
+    editor.value = oldText;
+    editor.rows = 3;
+
+    const btnRow = el('div', 'msg-editor-actions');
+    const cancel = el('button', 'btn-ghost', 'Cancel');
+    const save = el('button', 'btn-primary', 'Save & resend');
+
+    cancel.addEventListener('click', () => {
+      editor.remove();
+      btnRow.remove();
+      body.style.display = '';
+      if (actions) actions.style.display = '';
+    });
+
+    save.addEventListener('click', () => {
+      const val = editor.value.trim();
+      if (!val) return;
+
+      /* Truncate history to match DOM position */
+      history.length = idx;
+
+      /* Remove this message and all that follow */
+      let node = wrap;
+      while (node) {
+        const next = node.nextSibling;
+        node.remove();
+        node = next;
+      }
+
+      /* Re-add the edited message */
+      history.push({ role: 'user', content: val });
+      hideEmpty();
+      chatEl.appendChild(createMsg('user', val));
+      scrollToBottom(true);
+      generate();
+    });
+
+    editor.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); cancel.click(); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save.click(); }
+    });
+
+    wrap.appendChild(editor);
+    wrap.appendChild(btnRow);
+    editor.focus();
+    editor.select();
+  }
+
+  /* ---- Regenerate assistant message ---- */
+  function regenerate(wrap) {
+    if (streaming) { toast('Already generating', 'fa-solid fa-hourglass'); return; }
+
+    const domMsgs = [...chatEl.querySelectorAll('.msg')];
+    const idx = domMsgs.indexOf(wrap);
+    if (idx === -1) return;
+
+    /* Drop this message and everything after */
+    let node = wrap;
+    while (node) {
+      const next = node.nextSibling;
+      node.remove();
+      node = next;
+    }
+
+    /* Truncate history to match — the assistant message is the last entry */
+    history.length = idx;
+
+    generate();
+  }
+
+  function setStreaming(v) {
+    streaming = v;
+    sendBtn.classList.toggle('hidden', v);
+    stopBtn.classList.toggle('hidden', !v);
+    inputEl.disabled = v;
+    if (!v) inputEl.focus();
+  }
+
+  /* ---- Stop ---- */
+  stopBtn.addEventListener('click', () => {
+    if (abortCtl) try { abortCtl.abort(); } catch (e) {}
+  });
+
+  /* ---- Input handlers ---- */
+  sendBtn.addEventListener('click', send);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+
+  /* ---- Public API ---- */
+  return {
+    send,
+    clear() {
+      history.length = 0;
+      chatEl.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.id = 'aiEmpty';
+      empty.className = 'text-center py-8';
+      empty.innerHTML =
+        '<div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-400 mb-2">' +
+        '<i class="fa-solid fa-wand-magic-sparkles text-[14px]"></i></div>' +
+        '<p class="text-[12px] text-slate-500 leading-relaxed">' +
+        'Ask a maths question or describe what to plot.<br>' +
+        'The AI reasons first, then updates the graph.</p>';
+      const sug = document.createElement('div');
+      sug.id = 'aiSuggestions';
+      sug.className = 'flex flex-wrap gap-1.5 justify-center mt-3 max-w-xs mx-auto';
+      buildSuggestions(sug);
+      empty.appendChild(sug);
+      chatEl.appendChild(empty);
+    }
+  };
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     EXPORT MODULE
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/x-module" id="mod-export">
+/* ============================================================
+ * export.js — PNG + JSON export helpers
+ * ============================================================ */
+
+export const EXPORT_SCALE = 2;
+
+export function timestamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+export function buildExportCanvas(w, h, paint) {
+  const c = document.createElement('canvas');
+  c.width  = Math.max(1, Math.round(w * EXPORT_SCALE));
+  c.height = Math.max(1, Math.round(h * EXPORT_SCALE));
+  const cx = c.getContext('2d');
+  cx.setTransform(EXPORT_SCALE, 0, 0, EXPORT_SCALE, 0, 0);
+  paint(cx, w, h);
+  return c;
+}
+
+export async function downloadPNG(canvas, filename) {
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function copyPNG(canvas) {
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (!navigator.clipboard || !window.ClipboardItem) throw new Error('Clipboard not supported');
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+}
+
+export function downloadJSON(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function loadJSON() {
+  return new Promise((resolve, reject) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'application/json,.json';
+    inp.addEventListener('change', () => {
+      const file = inp.files && inp.files[0];
+      if (!file) return reject(new Error('No file selected'));
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { resolve(JSON.parse(reader.result)); }
+        catch (e) { reject(new Error('Invalid JSON')); }
+      };
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsText(file);
+    });
+    inp.click();
+  });
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN APP
+     ═══════════════════════════════════════════════════════ -->
+<script type="module">
+/* ============================================================
+ * GridCraft — main entry
+ * ============================================================ */
+
+async function loadModule(id) {
+  const src = document.getElementById(id).textContent;
+  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  try { return await import(url); }
+  finally { URL.revokeObjectURL(url); }
+}
+
+const [AI, EXPORT] = await Promise.all([
+  loadModule('mod-ai'),
+  loadModule('mod-export')
+]);
+
+/* ============================================================
+ * Helpers
+ * ============================================================ */
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+const round3 = v => Math.round(v * 1000) / 1000;
+
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / p;
+  return (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10) * p;
+}
+
+function fmtNum(v, step) {
+  const dec = step >= 1 ? 0 : clamp(Math.ceil(-Math.log10(step) - 1e-9), 0, 4);
+  const s = v.toFixed(dec);
+  return s === '-0' ? '0' : s;
+}
+
+/* ============================================================
+ * State
+ * ============================================================ */
+const state = {
+  points: [],
+  curves: [],
+  connect: true,
+  connectStyle: 'sequence',
+  lineWidth: 2,
+  lineColor: '#0f172a',
+  gridColor: '#cbd5e1',
+  axisColor: '#0f172a',
+  xTitle: 'x',
+  yTitle: 'y',
+  showGrid: true,
+  showNumbers: true,
+  showPointCoords: true,
+  snap: true
+};
+
+const view = { cx: 0, cy: 0, ppu: 48 };
+const BASE_PPU = 48;
+
+let idCounter = 0;
+const nextId = () => 'p' + (++idCounter);
+
+/* ============================================================
+ * Canvas setup
+ * ============================================================ */
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+const wrapEl = $('canvasWrap');
+let W = 0, H = 0, dpr = 1;
+
+function makeProj(v, w, h) {
+  return {
+    x: mx => w / 2 + (mx - v.cx) * v.ppu,
+    y: my => h / 2 - (my - v.cy) * v.ppu,
+    mx: px => v.cx + (px - w / 2) / v.ppu,
+    my: py => v.cy - (py - h / 2) / v.ppu
+  };
+}
+
+let rafPending = false;
+function requestDraw() {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; draw(); });
+}
+
+function resize() {
+  const r = wrapEl.getBoundingClientRect();
+  W = Math.max(1, Math.round(r.width));
+  H = Math.max(1, Math.round(r.height));
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  requestDraw();
+}
+
+function draw() {
+  if (!W || !H) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render(ctx, W, H, { theme: 'light' });
+}
+
+/* ============================================================
+ * Renderer
+ * ============================================================ */
+function render(c, w, h, opts) {
+  opts = opts || {};
+  const v = opts.view || view;
+  const theme = opts.theme || 'light';
+
+  let bg, axisCol, gridCol, minorCol, textCol, ringCol;
+  if (theme === 'dark') {
+    bg = '#0b1220'; axisCol = '#e2e8f0'; gridCol = '#334155';
+    minorCol = '#1e293b'; textCol = '#f1f5f9'; ringCol = '#0b1220';
+  } else if (theme === 'transparent') {
+    bg = null; axisCol = state.axisColor; gridCol = state.gridColor;
+    minorCol = '#eef1f5'; textCol = '#0f172a'; ringCol = '#ffffff';
+  } else {
+    bg = '#ffffff'; axisCol = state.axisColor; gridCol = state.gridColor;
+    minorCol = '#eef1f5'; textCol = '#0f172a'; ringCol = '#ffffff';
+  }
+
+  if (bg) { c.fillStyle = bg; c.fillRect(0, 0, w, h); }
+  else c.clearRect(0, 0, w, h);
+
+  const p = makeProj(v, w, h);
+  const xL = p.mx(0), xR = p.mx(w);
+  const yB = p.my(h), yT = p.my(0);
+
+  const major = niceStep(80 / v.ppu);
+  const minor = major / 5;
+
+  const m0 = Math.ceil(xL / major), m1 = Math.floor(xR / major);
+  const n0 = Math.ceil(yB / major), n1 = Math.floor(yT / major);
+
+  if (state.showGrid) {
+    const i0 = Math.ceil(xL / minor), i1 = Math.floor(xR / minor);
+    const j0 = Math.ceil(yB / minor), j1 = Math.floor(yT / minor);
+    if ((i1 - i0) < 400 && (j1 - j0) < 400) {
+      c.save();
+      c.globalAlpha = theme === 'dark' ? 0.6 : 0.55;
+      c.strokeStyle = minorCol;
+      c.lineWidth = 1;
+      c.beginPath();
+      for (let i = i0; i <= i1; i++) {
+        if (i % 5 === 0) continue;
+        const px = Math.round(p.x(i * minor)) + 0.5;
+        c.moveTo(px, 0); c.lineTo(px, h);
+      }
+      for (let j = j0; j <= j1; j++) {
+        if (j % 5 === 0) continue;
+        const py = Math.round(p.y(j * minor)) + 0.5;
+        c.moveTo(0, py); c.lineTo(w, py);
+      }
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  if (state.showGrid) {
+    c.strokeStyle = gridCol;
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let i = m0; i <= m1; i++) {
+      if (i === 0) continue;
+      const px = Math.round(p.x(i * major)) + 0.5;
+      c.moveTo(px, 0); c.lineTo(px, h);
+    }
+    for (let j = n0; j <= n1; j++) {
+      if (j === 0) continue;
+      const py = Math.round(p.y(j * major)) + 0.5;
+      c.moveTo(0, py); c.lineTo(w, py);
+    }
+    c.stroke();
+  }
+
+  const ox = p.x(0), oy = p.y(0);
+  const xAxisOn = oy >= -0.5 && oy <= h + 0.5;
+  const yAxisOn = ox >= -0.5 && ox <= w + 0.5;
+
+  if (xAxisOn || yAxisOn) {
+    c.strokeStyle = axisCol;
+    c.lineWidth = 1.5;
+    c.beginPath();
+    if (xAxisOn) { const y = Math.round(oy) + 0.5; c.moveTo(0, y); c.lineTo(w, y); }
+    if (yAxisOn) { const x = Math.round(ox) + 0.5; c.moveTo(x, 0); c.lineTo(x, h); }
+    c.stroke();
+  }
+
+  c.fillStyle = axisCol;
+  if (xAxisOn) {
+    c.beginPath(); c.moveTo(w - 1, oy);
+    c.lineTo(w - 10, oy - 4.5); c.lineTo(w - 10, oy + 4.5);
+    c.closePath(); c.fill();
+  }
+  if (yAxisOn) {
+    c.beginPath(); c.moveTo(ox, 1);
+    c.lineTo(ox - 4.5, 10); c.lineTo(ox + 4.5, 10);
+    c.closePath(); c.fill();
+  }
+
+  if (state.showNumbers) {
+    c.font = '500 11px "JetBrains Mono", monospace';
+    c.fillStyle = axisCol;
+    c.strokeStyle = axisCol;
+    c.lineWidth = 1;
+
+    const tickY = clamp(oy, 0, h);
+    const below = tickY < h - 24;
+    const labY = below ? tickY + 8 : tickY - 8;
+    c.textAlign = 'center';
+    c.textBaseline = below ? 'top' : 'bottom';
+
+    c.beginPath();
+    for (let i = m0; i <= m1; i++) {
+      if (i === 0) continue;
+      const px = Math.round(p.x(i * major)) + 0.5;
+      c.moveTo(px, tickY - 3.5); c.lineTo(px, tickY + 3.5);
+      c.fillText(fmtNum(i * major, major), px, labY);
+    }
+
+    const tickX = clamp(ox, 0, w);
+    const leftSide = tickX > 44;
+    const labX = leftSide ? tickX - 8 : tickX + 8;
+    c.textAlign = leftSide ? 'right' : 'left';
+    c.textBaseline = 'middle';
+
+    for (let j = n0; j <= n1; j++) {
+      if (j === 0) continue;
+      const py = Math.round(p.y(j * major)) + 0.5;
+      c.moveTo(tickX - 3.5, py); c.lineTo(tickX + 3.5, py);
+      c.fillText(fmtNum(j * major, major), labX, py);
+    }
+    c.stroke();
+
+    if (xAxisOn && yAxisOn) {
+      c.textAlign = 'right'; c.textBaseline = 'top';
+      c.fillText('0', ox - 5, oy + 5);
+    }
+
+    c.font = '600 12px Inter, sans-serif';
+    c.fillStyle = axisCol;
+    if (xAxisOn) {
+      c.textAlign = 'right'; c.textBaseline = 'bottom';
+      c.fillText(state.xTitle, w - 14, clamp(oy - 8, 16, h - 4));
+    }
+    if (yAxisOn) {
+      c.textAlign = 'left'; c.textBaseline = 'top';
+      c.fillText(state.yTitle, clamp(ox + 10, 4, w - 24), 8);
+    }
+  }
+
+  for (const cv of state.curves) {
+    if (cv.visible === false) continue;
+    const fn = getCurveFn(cv);
+    if (!fn) continue;
+
+    c.strokeStyle = cv.color;
+    c.lineWidth = 2;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    c.beginPath();
+
+    let started = false;
+    let prevPy = 0;
+    const stepPx = v.ppu < 12 ? 2 : 1;
+
+    for (let px = 0; px <= w; px += stepPx) {
+      let my;
+      try { my = fn(p.mx(px)); } catch (err) { started = false; continue; }
+      if (typeof my !== 'number' || !isFinite(my)) { started = false; continue; }
+
+      const py = p.y(my);
+      if (py < -1e4 || py > 1e4) { started = false; continue; }
+      if (started && Math.abs(py - prevPy) > h * 1.5) started = false;
+
+      if (!started) { c.moveTo(px, py); started = true; }
+      else c.lineTo(px, py);
+      prevPy = py;
+    }
+    c.stroke();
+  }
+
+  const visiblePoints = state.points.filter(pt => pt.visible);
+  if (state.connect && visiblePoints.length > 1) {
+    const col = state.lineColor;
+    const coords = visiblePoints.map(pt => [p.x(pt.x), p.y(pt.y)]);
+
+    c.strokeStyle = col;
+    c.lineWidth = state.lineWidth;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+
+    if (state.connectStyle === 'arrows') {
+      c.beginPath();
+      for (let i = 0; i < coords.length - 1; i++) {
+        c.moveTo(coords[i][0], coords[i][1]);
+        c.lineTo(coords[i + 1][0], coords[i + 1][1]);
+      }
+      c.stroke();
+
+      c.fillStyle = col;
+      const hl = 7 + state.lineWidth * 1.6;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const [x1, y1] = coords[i], [x2, y2] = coords[i + 1];
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        c.beginPath(); c.moveTo(x2, y2);
+        c.lineTo(x2 - hl * Math.cos(a - 0.42), y2 - hl * Math.sin(a - 0.42));
+        c.lineTo(x2 - hl * Math.cos(a + 0.42), y2 - hl * Math.sin(a + 0.42));
+        c.closePath(); c.fill();
+      }
+    } else {
+      c.beginPath();
+      c.moveTo(coords[0][0], coords[0][1]);
+      for (let i = 1; i < coords.length; i++) c.lineTo(coords[i][0], coords[i][1]);
+      if (state.connectStyle === 'polygon' && coords.length > 2) c.closePath();
+      c.stroke();
+
+      if (state.connectStyle === 'polygon' && coords.length > 2) {
+        c.globalAlpha = 0.12; c.fillStyle = col; c.fill(); c.globalAlpha = 1;
+      }
+    }
+  }
+
+  for (const pt of visiblePoints) {
+    const px = p.x(pt.x), py = p.y(pt.y);
+    if (px < -80 || px > w + 80 || py < -80 || py > h + 80) continue;
+
+    const active = (dragPoint && dragPoint.id === pt.id) || hoverId === pt.id;
+
+    c.beginPath();
+    c.arc(px, py, active ? 7 : 5, 0, Math.PI * 2);
+    c.fillStyle = pt.color;
+    c.fill();
+    c.lineWidth = 2;
+    c.strokeStyle = ringCol;
+    c.stroke();
+
+    const text = state.showPointCoords
+      ? `${pt.label}(${round3(pt.x)}, ${round3(pt.y)})`
+      : pt.label;
+
+    if (text) {
+      c.font = '600 11px "JetBrains Mono", monospace';
+      c.textAlign = 'left'; c.textBaseline = 'bottom';
+      c.lineWidth = 3;
+      c.strokeStyle = bg ? bg : 'rgba(255,255,255,0.9)';
+      c.strokeText(text, px + 9, py - 7);
+      c.fillStyle = textCol;
+      c.fillText(text, px + 9, py - 7);
+    }
+  }
+}
+
+/* ============================================================
+ * Curve compilation
+ * ============================================================ */
+const parser = new exprEval.Parser();
+function getCurveFn(cv) {
+  if (cv._fn && cv._src === cv.expr) return cv._fn;
+  cv._src = cv.expr;
+  try {
+    const clean = cv.expr.replace(/^\s*y\s*=\s*/i, '');
+    cv._fn = parser.parse(clean).toJSFunction('x');
+  } catch (err) { cv._fn = null; }
+  return cv._fn;
+}
+
+/* ============================================================
+ * View controls
+ * ============================================================ */
+function updateZoomLabel() {
+  $('zoomReset').textContent = Math.round(view.ppu / BASE_PPU * 100) + '%';
+}
+
+function zoomAt(clientX, clientY, factor) {
+  const r = canvas.getBoundingClientRect();
+  const px = clientX - r.left, py = clientY - r.top;
+  const p = makeProj(view, W, H);
+  const mx = p.mx(px), my = p.my(py);
+
+  const next = clamp(view.ppu * factor, 1, 6000);
+  if (next === view.ppu) return;
+  view.ppu = next;
+  view.cx = mx - (px - W / 2) / view.ppu;
+  view.cy = my + (py - H / 2) / view.ppu;
+
+  updateZoomLabel();
+  requestDraw();
+  save();
+}
+
+function resetView() {
+  view.cx = 0; view.cy = 0; view.ppu = BASE_PPU;
+  updateZoomLabel(); requestDraw(); save();
+}
+
+function fitView() {
+  const pts = state.points.filter(p => p.visible);
+  if (pts.length === 0) { resetView(); return; }
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const pt of pts) {
+    minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+    minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+  }
+
+  const spanX = Math.max(maxX - minX, 4);
+  const spanY = Math.max(maxY - minY, 4);
+  const pad = 1.4;
+
+  view.cx = (minX + maxX) / 2;
+  view.cy = (minY + maxY) / 2;
+  view.ppu = clamp(Math.min(W / (spanX * pad), H / (spanY * pad)), 1, 6000);
+
+  updateZoomLabel(); requestDraw(); save();
+}
+
+/* ============================================================
+ * Points & Curves
+ * ============================================================ */
+const pointRows = new Map();
+
+function nextLabel() {
+  const used = new Set(state.points.map(p => p.label));
+  for (let i = 0; i < 26; i++) {
+    const ch = String.fromCharCode(65 + i);
+    if (!used.has(ch)) return ch;
+  }
+  return 'P' + (state.points.length + 1);
+}
+
+function snapStep() { return niceStep(50 / view.ppu); }
+
+function rawAddPoint(x, y, label, color) {
+  const pt = {
+    id: nextId(),
+    label: label || nextLabel(),
+    x: round3(x), y: round3(y),
+    color: color || '#0f172a',
+    visible: true
+  };
+  state.points.push(pt);
+  return pt;
+}
+
+function addPoint(x, y) {
+  commit();
+  rawAddPoint(x, y);
+  refreshAll(); save();
+}
+
+function rawAddCurve(expr, color) {
+  const cv = { id: nextId(), expr: String(expr).trim(), color: color || '#0284c7', visible: true };
+  state.curves.push(cv);
+  return cv;
+}
+
+function removePoint(pt) {
+  commit();
+  state.points = state.points.filter(q => q !== pt);
+  refreshAll(); save();
+}
+
+function updateEmptyState() {
+  const empty = $('emptyState');
+  const isEmpty = state.points.length === 0 && state.curves.length === 0;
+  empty.style.opacity = isEmpty ? '1' : '0';
+}
+
+function renderPoints() {
+  const list = $('pointsList');
+  list.innerHTML = '';
+  pointRows.clear();
+
+  $('pointsCount').textContent = state.points.length ? `(${state.points.length})` : '';
+
+  if (!state.points.length) {
+    list.innerHTML = '<p class="text-[11.5px] text-slate-400 italic py-1">No points yet.</p>';
+    return;
+  }
+
+  for (const pt of state.points) {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-1 p-1 rounded-md bg-slate-50 border border-slate-200';
+
+    const color = document.createElement('input');
+    color.type = 'color'; color.value = pt.color; color.title = 'Colour';
+    color.className = 'w-5 h-5 p-0 border border-slate-200 rounded cursor-pointer bg-white shrink-0';
+    color.addEventListener('input', () => { pt.color = color.value; requestDraw(); save(); });
+    color.addEventListener('focus', () => commit());
+
+    const lab = document.createElement('input');
+    lab.type = 'text'; lab.value = pt.label; lab.maxLength = 4;
+    lab.className = 'w-8 shrink-0 text-center text-[11.5px] font-semibold bg-white border border-slate-200 rounded py-1 outline-none focus:border-slate-900';
+    lab.addEventListener('input', () => { pt.label = lab.value; requestDraw(); save(); });
+    lab.addEventListener('focus', () => commit());
+
+    const xi = numField(pt.x, v => { pt.x = v; requestDraw(); save(); });
+    const yi = numField(pt.y, v => { pt.y = v; requestDraw(); save(); });
+
+    const eye = mkIcon('fa-eye' + (pt.visible ? '' : '-slash'), pt.visible ? 'Hide' : 'Show');
+    eye.addEventListener('click', () => {
+      commit(); pt.visible = !pt.visible;
+      eye.querySelector('i').className = 'fa-solid ' + (pt.visible ? 'fa-eye' : 'fa-eye-slash');
+      requestDraw(); save();
+    });
+
+    const del = mkIcon('fa-trash-can', 'Delete');
+    del.addEventListener('click', () => removePoint(pt));
+
+    row.append(color, lab, xi, yi, eye, del);
+    list.appendChild(row);
+    pointRows.set(pt.id, { xi, yi, lab, color });
+  }
+}
+
+function numField(value, onChange) {
+  const i = document.createElement('input');
+  i.type = 'number'; i.step = 'any'; i.value = value;
+  i.className = 'w-11 shrink-0 text-center text-[11.5px] font-mono bg-white border border-slate-200 rounded py-1 px-1 outline-none focus:border-slate-900';
+  i.addEventListener('input', () => { const v = parseFloat(i.value); if (!isNaN(v)) onChange(v); });
+  i.addEventListener('focus', () => commit());
+  return i;
+}
+
+function mkIcon(icon, title) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.title = title;
+  b.className = 'w-6 h-6 grid place-items-center rounded text-slate-400 hover:text-slate-900 transition shrink-0 text-[10.5px]';
+  b.innerHTML = '<i class="fa-solid ' + icon + '"></i>';
+  return b;
+}
+
+function syncPointInputs(pt) {
+  const r = pointRows.get(pt.id);
+  if (!r) return;
+  if (document.activeElement !== r.xi) r.xi.value = round3(pt.x);
+  if (document.activeElement !== r.yi) r.yi.value = round3(pt.y);
+}
+
+function renderCurves() {
+  const list = $('curvesList');
+  list.innerHTML = '';
+  $('curvesCount').textContent = state.curves.length ? `(${state.curves.length})` : '';
+
+  if (!state.curves.length) {
+    list.innerHTML = '<p class="text-[11.5px] text-slate-400 italic py-1">No curves yet.</p>';
+    return;
+  }
+
+  for (const cv of state.curves) {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 p-1 rounded-md bg-slate-50 border border-slate-200';
+
+    const dot = document.createElement('span');
+    dot.className = 'w-2.5 h-2.5 rounded-full shrink-0';
+    dot.style.background = cv.color;
+
+    const txt = document.createElement('span');
+    txt.className = 'flex-1 text-[11.5px] font-mono text-slate-700 truncate selectable';
+    txt.textContent = 'y = ' + cv.expr;
+    txt.title = 'y = ' + cv.expr;
+
+    const del = mkIcon('fa-trash-can', 'Delete');
+    del.addEventListener('click', () => {
+      commit();
+      state.curves = state.curves.filter(c => c !== cv);
+      renderCurves(); requestDraw(); save();
+    });
+
+    row.append(dot, txt, del);
+    list.appendChild(row);
+  }
+}
+
+/* ============================================================
+ * History
+ * ============================================================ */
+let past = [], future = [];
+
+function serializeGraph() {
+  return JSON.stringify({
+    points: state.points,
+    curves: state.curves.map(c => ({ id: c.id, expr: c.expr, color: c.color, visible: c.visible }))
+  });
+}
+
+function commit() {
+  const snap = serializeGraph();
+  if (past.length && past[past.length - 1] === snap) return;
+  past.push(snap);
+  if (past.length > 80) past.shift();
+  future = [];
+  updateHistoryUI();
+}
+
+function applySnapshot(snap) {
+  state.points = snap.points || [];
+  state.curves = snap.curves || [];
+  refreshAll();
+}
+
+function undo() {
+  if (!past.length) return;
+  future.push(serializeGraph());
+  applySnapshot(JSON.parse(past.pop()));
+  updateHistoryUI(); save();
+}
+
+function redo() {
+  if (!future.length) return;
+  past.push(serializeGraph());
+  applySnapshot(JSON.parse(future.pop()));
+  updateHistoryUI(); save();
+}
+
+function updateHistoryUI() {
+  $('undoBtn').disabled = past.length === 0;
+  $('redoBtn').disabled = future.length === 0;
+}
+
+/* ============================================================
+ * Persistence
+ * ============================================================ */
+let saveTimer;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem('gridcraft.v5', JSON.stringify({ state, view })); }
+    catch (err) { /* ignore */ }
+  }, 400);
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('gridcraft.v5');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.state) {
+      for (const k of Object.keys(state)) {
+        if (k in data.state) state[k] = data.state[k];
+      }
+    }
+    if (data.view) {
+      view.cx = data.view.cx ?? 0;
+      view.cy = data.view.cy ?? 0;
+      view.ppu = data.view.ppu ?? BASE_PPU;
+    }
+    return true;
+  } catch (err) { return false; }
+}
+
+/* ============================================================
+ * UI sync
+ * ============================================================ */
+function syncUI() {
+  $('snapChk').checked = state.snap;
+  $('connectChk').checked = state.connect;
+  $('connectStyle').value = state.connectStyle;
+  $('lineWidth').value = String(state.lineWidth);
+  $('lineColor').value = state.lineColor;
+  $('gridColor').value = state.gridColor;
+  $('axisColor').value = state.axisColor;
+  $('xTitle').value = state.xTitle;
+  $('yTitle').value = state.yTitle;
+  $('gridChk').checked = state.showGrid;
+  $('numbersChk').checked = state.showNumbers;
+  $('coordsChk').checked = state.showPointCoords;
+
+  $('lineOptions').style.opacity = state.connect ? '1' : '.45';
+  $('lineOptions').style.pointerEvents = state.connect ? '' : 'none';
+
+  updateZoomLabel();
+  updateHistoryUI();
+}
+
+function refreshAll() {
+  renderPoints();
+  renderCurves();
+  updateEmptyState();
+  requestDraw();
+}
+
+/* ============================================================
+ * Toast
+ * ============================================================ */
+let toastTimer;
+function toast(msg, icon) {
+  const t = $('toast');
+  $('toastMsg').textContent = msg;
+  $('toastIcon').className = (icon || 'fa-solid fa-circle-check') + ' text-sky-400 text-[11px]';
+  t.classList.remove('opacity-0', 'translate-y-2');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('opacity-0', 'translate-y-2'), 1800);
+}
+
+/* ============================================================
+ * Pointer interaction
+ * ============================================================ */
+const pointers = new Map();
+let dragPoint = null;
+let panning = false;
+let lastPan = null;
+let pinchPrev = null;
+let hoverId = null;
+let downPos = null;
+let hasMoved = false;
+
+function hitTest(px, py) {
+  const p = makeProj(view, W, H);
+  let best = null, bestD = 20;
+  for (const pt of state.points) {
+    if (!pt.visible) continue;
+    const d = Math.hypot(p.x(pt.x) - px, p.y(pt.y) - py);
+    if (d < bestD) { bestD = d; best = pt; }
+  }
+  return best;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pointers.size === 2) { panning = false; dragPoint = null; pinchPrev = null; return; }
+  if (pointers.size > 2) return;
+
+  const r = canvas.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  const hit = hitTest(px, py);
+
+  downPos = { x: e.clientX, y: e.clientY };
+  hasMoved = false;
+
+  if (hit) { commit(); dragPoint = hit; }
+  else { panning = true; lastPan = { x: e.clientX, y: e.clientY }; }
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  }
+
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    if (pinchPrev && pinchPrev > 0) {
+      const f = dist / pinchPrev;
+      if (isFinite(f) && f > 0) zoomAt(midX, midY, f);
+    }
+    pinchPrev = dist;
+    return;
+  }
+
+  const r = canvas.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  const p = makeProj(view, W, H);
+
+  if (dragPoint) {
+    hasMoved = true;
+    const s = state.snap ? snapStep() : 0;
+    const mx = p.mx(px), my = p.my(py);
+    dragPoint.x = s ? Math.round(mx / s) * s : round3(mx);
+    dragPoint.y = s ? Math.round(my / s) * s : round3(my);
+    syncPointInputs(dragPoint);
+    requestDraw(); save();
+    return;
+  }
+
+  if (panning && lastPan) {
+    hasMoved = true;
+    const dx = e.clientX - lastPan.x, dy = e.clientY - lastPan.y;
+    view.cx -= dx / view.ppu;
+    view.cy += dy / view.ppu;
+    lastPan = { x: e.clientX, y: e.clientY };
+    requestDraw(); save();
+    return;
+  }
+
+  const hit = hitTest(px, py);
+  const newHover = hit ? hit.id : null;
+  if (newHover !== hoverId) { hoverId = newHover; requestDraw(); }
+});
+
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchPrev = null;
+
+  if (pointers.size === 0) {
+    if (!dragPoint && !hasMoved && downPos) {
+      const r = canvas.getBoundingClientRect();
+      const px = downPos.x - r.left, py = downPos.y - r.top;
+      const p = makeProj(view, W, H);
+      const mx = p.mx(px), my = p.my(py);
+      const s = state.snap ? snapStep() : 0;
+      const x = s ? Math.round(mx / s) * s : round3(mx);
+      const y = s ? Math.round(my / s) * s : round3(my);
+      addPoint(x, y);
+    }
+
+    dragPoint = null;
+    panning = false;
+    lastPan = null;
+    downPos = null;
+    hasMoved = false;
+  }
+}
+
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = Math.exp(-e.deltaY * 0.0015);
+  zoomAt(e.clientX, e.clientY, factor);
+}, { passive: false });
+
+/* ============================================================
+ * Graph API (for AI actions)
+ * ============================================================ */
+const graph = {
+  addPoint: rawAddPoint,
+  addCurve: rawAddCurve,
+  removePointByLabel(label) {
+    state.points = state.points.filter(p => p.label !== label);
+  },
+  removeCurveByExpr(expr) {
+    state.curves = state.curves.filter(c => c.expr !== expr);
+  },
+  clear(scope) {
+    if (scope === 'points') state.points = [];
+    else if (scope === 'curves') state.curves = [];
+    else { state.points = []; state.curves = []; }
+  },
+  set(key, value) {
+    const allowed = [
+      'connect','connectStyle','lineColor','lineWidth',
+      'gridColor','axisColor','xTitle','yTitle',
+      'showGrid','showNumbers','showPointCoords','snap'
+    ];
+    if (!allowed.includes(key)) return false;
+
+    if (key === 'connectStyle') {
+      if (!['sequence','polygon','arrows'].includes(value)) return false;
+      state.connectStyle = value;
+    } else if (key === 'lineWidth') {
+      const n = parseInt(value, 10);
+      if (![1, 2, 3].includes(n)) return false;
+      state.lineWidth = n;
+    } else if (key === 'lineColor' || key === 'gridColor' || key === 'axisColor') {
+      if (typeof value !== 'string') return false;
+      state[key] = value;
+    } else if (key === 'xTitle' || key === 'yTitle') {
+      state[key] = String(value).slice(0, 8);
+    } else {
+      state[key] = !!value;
+    }
+    return true;
+  },
+  setView(v) {
+    if (typeof v.cx === 'number') view.cx = v.cx;
+    if (typeof v.cy === 'number') view.cy = v.cy;
+    if (typeof v.ppu === 'number' && v.ppu > 0) view.ppu = clamp(v.ppu, 1, 6000);
+    updateZoomLabel();
+  },
+  fit: fitView,
+  reset: resetView,
+  refresh() {
+    refreshAll();
+    syncUI();
+    save();
+  },
+  context() {
+    const lines = [];
+    if (state.points.length) {
+      lines.push('Points: ' + state.points.map(p =>
+        `${p.label}(${round3(p.x)}, ${round3(p.y)})`).join(', '));
+    } else {
+      lines.push('Points: (none)');
+    }
+    if (state.curves.length) {
+      lines.push('Curves: ' + state.curves.map(c => 'y = ' + c.expr).join(', '));
+    } else {
+      lines.push('Curves: (none)');
+    }
+    lines.push(`Connected: ${state.connect ? 'yes' : 'no'} (style: ${state.connectStyle})`);
+    lines.push(`View: center (${round3(view.cx)}, ${round3(view.cy)}), zoom ${Math.round(view.ppu)}px/unit`);
+    return lines.join('\n');
+  }
+};
+
+/* ============================================================
+ * AI action executor
+ * ============================================================ */
+function executeActions(payload) {
+  if (!payload || !Array.isArray(payload.actions)) return;
+  commit();
+  let count = 0;
+
+  for (const a of payload.actions) {
+    try {
+      switch (a.type) {
+        case 'addPoint':
+          if (typeof a.x === 'number' && typeof a.y === 'number') {
+            graph.addPoint(a.x, a.y, a.label, a.color); count++;
+          }
+          break;
+        case 'addCurve':
+          if (typeof a.expr === 'string' && a.expr.trim()) {
+            const probe = { expr: a.expr, color: a.color, visible: true };
+            if (getCurveFn(probe)) { graph.addCurve(a.expr, a.color); count++; }
+          }
+          break;
+        case 'removePoint':
+          if (a.label) { graph.removePointByLabel(a.label); count++; }
+          break;
+        case 'removeCurve':
+          if (a.expr) { graph.removeCurveByExpr(a.expr); count++; }
+          break;
+        case 'clear':
+          graph.clear(a.scope || 'all'); count++;
+          break;
+        case 'set':
+          if (a.key && graph.set(a.key, a.value)) count++;
+          break;
+        case 'view':
+          graph.setView(a); count++;
+          break;
+        case 'fit':
+          graph.fit(); count++;
+          break;
+        case 'reset':
+          graph.reset(); count++;
+          break;
+      }
+    } catch (e) { console.warn('Action failed', a, e); }
+  }
+
+  graph.refresh();
+  if (count) toast(`Applied ${count} change${count > 1 ? 's' : ''}`, 'fa-solid fa-wand-magic-sparkles');
+}
+
+/* ============================================================
+ * Assistant
+ * ============================================================ */
+const assistant = AI.createAssistant({
+  chatEl: $('aiChat'),
+  inputEl: $('aiInput'),
+  sendBtn: $('aiSend'),
+  stopBtn: $('aiStop'),
+  getEndpoint: () => $('aiEndpoint').value,
+  getModel: () => $('aiModel').value,
+  getApiKey: () => $('aiKey').value,
+  getGraphContext: () => graph.context(),
+  executeActions,
+  toast
+});
+
+['aiEndpoint', 'aiModel', 'aiKey'].forEach(id => {
+  const el = $(id);
+  const saved = localStorage.getItem('gridcraft.' + id);
+  if (saved !== null) el.value = saved;
+  el.addEventListener('input', () => {
+    try { localStorage.setItem('gridcraft.' + id, el.value); } catch (e) {}
+  });
+});
+
+/* ============================================================
+ * Event wiring
+ * ============================================================ */
+function initEvents() {
+
+  $('undoBtn').addEventListener('click', undo);
+  $('redoBtn').addEventListener('click', redo);
+
+  $('zoomIn').addEventListener('click', () => {
+    const r = canvas.getBoundingClientRect();
+    zoomAt(r.left + W / 2, r.top + H / 2, 1.25);
+  });
+  $('zoomOut').addEventListener('click', () => {
+    const r = canvas.getBoundingClientRect();
+    zoomAt(r.left + W / 2, r.top + H / 2, 0.8);
+  });
+  $('zoomReset').addEventListener('click', resetView);
+  $('fitBtn').addEventListener('click', fitView);
+
+  /* Sidebar drawer */
+  $('panelBtn').addEventListener('click', () => {
+    const open = !$('sidebar').classList.contains('translate-x-full');
+    $('sidebar').classList.toggle('translate-x-full', open);
+    $('backdrop').classList.toggle('hidden', open);
+  });
+  $('backdrop').addEventListener('click', () => {
+    $('sidebar').classList.add('translate-x-full');
+    $('backdrop').classList.add('hidden');
+  });
+
+  /* Points */
+  $('addPointBtn').addEventListener('click', () => {
+    const x = parseFloat($('newX').value);
+    const y = parseFloat($('newY').value);
+    addPoint(isNaN(x) ? 0 : x, isNaN(y) ? 0 : y);
+  });
+  $('snapChk').addEventListener('change', e => { state.snap = e.target.checked; save(); });
+  $('clearPointsBtn').addEventListener('click', () => {
+    if (!state.points.length) return;
+    commit();
+    graph.clear('points');
+    graph.refresh();
+    toast('Points cleared', 'fa-solid fa-eraser');
+  });
+
+  /* Lines */
+  $('connectChk').addEventListener('change', e => {
+    state.connect = e.target.checked;
+    $('lineOptions').style.opacity = state.connect ? '1' : '.45';
+    $('lineOptions').style.pointerEvents = state.connect ? '' : 'none';
+    requestDraw(); save();
+  });
+  $('connectStyle').addEventListener('change', e => { state.connectStyle = e.target.value; requestDraw(); save(); });
+  $('lineWidth').addEventListener('change', e => { state.lineWidth = parseInt(e.target.value, 10); requestDraw(); save(); });
+  $('lineColor').addEventListener('input', e => { state.lineColor = e.target.value; requestDraw(); save(); });
+  $('lineColor').addEventListener('focus', () => commit());
+
+  /* Curves */
+  $('addCurveBtn').addEventListener('click', () => {
+    const expr = $('curveExpr').value.trim();
+    if (!expr) return;
+    const probe = { expr, color: $('curveColor').value, visible: true };
+    if (!getCurveFn(probe)) {
+      toast('That formula could not be read', 'fa-solid fa-triangle-exclamation');
+      return;
+    }
+    commit();
+    graph.addCurve(expr, probe.color);
+    renderCurves(); updateEmptyState(); requestDraw(); save();
+    toast('Curve plotted', 'fa-solid fa-chart-line');
+  });
+  $('curveExpr').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('addCurveBtn').click();
+  });
+
+  /* Appearance */
+  $('gridColor').addEventListener('input', e => { state.gridColor = e.target.value; requestDraw(); save(); });
+  $('gridColor').addEventListener('focus', () => commit());
+  $('axisColor').addEventListener('input', e => { state.axisColor = e.target.value; requestDraw(); save(); });
+  $('axisColor').addEventListener('focus', () => commit());
+  $('xTitle').addEventListener('input', e => { state.xTitle = e.target.value; requestDraw(); save(); });
+  $('xTitle').addEventListener('focus', () => commit());
+  $('yTitle').addEventListener('input', e => { state.yTitle = e.target.value; requestDraw(); save(); });
+  $('yTitle').addEventListener('focus', () => commit());
+
+  $('gridChk').addEventListener('change', e => { state.showGrid = e.target.checked; requestDraw(); save(); });
+  $('numbersChk').addEventListener('change', e => { state.showNumbers = e.target.checked; requestDraw(); save(); });
+  $('coordsChk').addEventListener('change', e => { state.showPointCoords = e.target.checked; requestDraw(); save(); });
+
+  /* JSON save / load / reset */
+  $('saveJSONBtn').addEventListener('click', () => {
+    EXPORT.downloadJSON({ state, view }, 'graph-' + EXPORT.timestamp() + '.json');
+    toast('Graph saved', 'fa-solid fa-file-code');
+  });
+  $('loadJSONBtn').addEventListener('click', async () => {
+    try {
+      const data = await EXPORT.loadJSON();
+      if (!data || !data.state) throw new Error('Unrecognized file');
+      commit();
+      for (const k of Object.keys(state)) if (k in data.state) state[k] = data.state[k];
+      if (data.view) {
+        view.cx = data.view.cx ?? 0;
+        view.cy = data.view.cy ?? 0;
+        view.ppu = data.view.ppu ?? BASE_PPU;
+      }
+      refreshAll(); syncUI(); save();
+      toast('Graph loaded', 'fa-solid fa-file-import');
+    } catch (err) {
+      toast(err.message || 'Could not load file', 'fa-solid fa-triangle-exclamation');
+    }
+  });
+  $('resetAllBtn').addEventListener('click', () => {
+    if (!confirm('Clear points, curves, and settings?')) return;
+    try { localStorage.removeItem('gridcraft.v5'); } catch (err) {}
+    Object.assign(state, {
+      points: [], curves: [],
+      connect: true, connectStyle: 'sequence', lineWidth: 2,
+      lineColor: '#0f172a', gridColor: '#cbd5e1', axisColor: '#0f172a',
+      xTitle: 'x', yTitle: 'y',
+      showGrid: true, showNumbers: true, showPointCoords: true,
+      snap: true
+    });
+    past = []; future = [];
+    resetView(); refreshAll(); syncUI();
+    toast('Everything reset', 'fa-solid fa-rotate');
+  });
+
+  /* Keyboard shortcuts */
+  window.addEventListener('keydown', e => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+    if (e.target.closest && e.target.closest('dialog[open]')) return;
+
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+
+    switch (e.key) {
+      case '+': case '=': {
+        const r = canvas.getBoundingClientRect();
+        zoomAt(r.left + W / 2, r.top + H / 2, 1.25); break;
+      }
+      case '-': case '_': {
+        const r = canvas.getBoundingClientRect();
+        zoomAt(r.left + W / 2, r.top + H / 2, 0.8); break;
+      }
+      case '0': resetView(); break;
+      case 'f': case 'F': fitView(); break;
+      case 'a': case 'A': $('aiBtn').click(); break;
+      case 'Delete': case 'Backspace': {
+        if (hoverId) {
+          const pt = state.points.find(p => p.id === hoverId);
+          if (pt) { removePoint(pt); toast('Point removed', 'fa-solid fa-trash-can'); }
+        }
+        break;
+      }
+    }
+  });
+
+  /* ═══ EXPORT ═══ */
+  const exportDlg = $('exportDialog');
+  let exportBg = 'white';
+
+  $('exportBtn').addEventListener('click', () => {
+    exportDlg.showModal();
+    requestAnimationFrame(updatePreview);
+  });
+
+  document.querySelectorAll('[data-bg]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      exportBg = btn.dataset.bg;
+      document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('is-active', b === btn));
+      updatePreview();
+    });
+  });
+
+  function updatePreview() {
+    const pc = $('previewCanvas');
+    if (!W || !H) return;
+    const targetW = 380;
+    const targetH = Math.round(targetW * H / W);
+    pc.width = targetW; pc.height = targetH;
+    const previewView = { cx: view.cx, cy: view.cy, ppu: view.ppu * (targetW / W) };
+    const c = pc.getContext('2d');
+    render(c, targetW, targetH, { theme: exportBg, view: previewView });
+  }
+
+  function makeExportCanvas() {
+    return EXPORT.buildExportCanvas(W, H, (cx, w, h) => {
+      render(cx, w, h, { theme: exportBg });
+    });
+  }
+
+  $('downloadBtn').addEventListener('click', async () => {
+    try {
+      const c = makeExportCanvas();
+      await EXPORT.downloadPNG(c, 'graph-' + EXPORT.timestamp() + '.png');
+      toast('Image downloaded', 'fa-solid fa-download');
+    } catch (err) {
+      toast('Export failed', 'fa-solid fa-triangle-exclamation');
+    }
+    exportDlg.close();
+  });
+
+  $('copyImgBtn').addEventListener('click', async () => {
+    try {
+      await EXPORT.copyPNG(makeExportCanvas());
+      toast('Copied to clipboard', 'fa-regular fa-copy');
+    } catch (err) {
+      toast('Copy not supported here', 'fa-solid fa-triangle-exclamation');
+    }
+    exportDlg.close();
+  });
+
+  /* ═══ AI DIALOG ═══ */
+  const aiDlg = $('aiDialog');
+  $('aiBtn').addEventListener('click', () => {
+    aiDlg.showModal();
+    setTimeout(() => $('aiInput').focus(), 100);
+  });
+  $('aiCloseBtn').addEventListener('click', () => aiDlg.close());
+  $('aiSettingsToggle').addEventListener('click', () => {
+    $('aiSettings').classList.toggle('hidden');
+  });
+  $('aiClearBtn').addEventListener('click', () => assistant.clear());
+}
+
+/* ============================================================
+ * Boot
+ * ============================================================ */
+function boot() {
+  const restored = load();
+
+  if (restored && state.points.length) {
+    let maxId = 0;
+    for (const p of state.points) {
+      const n = parseInt(String(p.id).replace(/\D/g, ''), 10);
+      if (!isNaN(n)) maxId = Math.max(maxId, n);
+    }
+    idCounter = maxId;
+  }
+
+  refreshAll();
+  syncUI();
+  initEvents();
+
+  const ro = new ResizeObserver(resize);
+  ro.observe(wrapEl);
+
+  resize();
+  updateZoomLabel();
+
+  if (!restored) {
+    state.points = [
+      { id: nextId(), label: 'A', x: -3, y: -2, color: '#0f172a', visible: true },
+      { id: nextId(), label: 'B', x: 3, y: -2, color: '#0f172a', visible: true },
+      { id: nextId(), label: 'C', x: 0, y: 3, color: '#0f172a', visible: true }
+    ];
+    state.curves = [{ id: nextId(), expr: '0.5*x^2 - 3', color: '#0284c7', visible: true }];
+    refreshAll();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
